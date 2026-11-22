@@ -1,0 +1,463 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px)}</style>
+<title>Ski-WM Tippspiel</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: dunkles Zeitnahme-Band oben, darunter Tabs und eine einzelne Inhaltsspalte (max 760px), Karten nur für Rennen und Rangliste */
+:root{
+  --bg:#eef3f7; --surface:#ffffff; --ink:#12212f; --muted:#576777; --line:#d6dfe7;
+  --accent:#c8102e; --accent-ink:#ffffff; --hero:#0f2a43; --hero-ink:#ffffff; --hero-muted:#a9bccd;
+  --ok:#17784a; --ok-bg:#dff3e8; --warn:#8a5a00; --warn-bg:#fbefd0; --bad:#a3212f; --bad-bg:#fbe1e4;
+  --gold:#c29a1c; --silver:#8794a1; --bronze:#b0693a; --focus:#1a6fd1;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1621; --surface:#13263a; --ink:#e8eef4; --muted:#9db0c2; --line:#27425d;
+  --accent:#ee4560; --accent-ink:#ffffff; --hero:#071019; --hero-ink:#ffffff; --hero-muted:#8fa5b9;
+  --ok:#5fd09a; --ok-bg:#12382a; --warn:#f0c15a; --warn-bg:#3a2d0c; --bad:#ff8a97; --bad-bg:#401820;
+  --gold:#e0b83a; --silver:#a8b4c0; --bronze:#d08852; --focus:#6aa9f5; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1621; --surface:#13263a; --ink:#e8eef4; --muted:#9db0c2; --line:#27425d;
+  --accent:#ee4560; --accent-ink:#ffffff; --hero:#071019; --hero-ink:#ffffff; --hero-muted:#8fa5b9;
+  --ok:#5fd09a; --ok-bg:#12382a; --warn:#f0c15a; --warn-bg:#3a2d0c; --bad:#ff8a97; --bad-bg:#401820;
+  --gold:#e0b83a; --silver:#a8b4c0; --bronze:#d08852; --focus:#6aa9f5; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.hero{background:var(--hero);color:var(--hero-ink);margin-top:calc(-1 * env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-bottom:20px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--hero-muted);margin:0 0 4px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,8vw,52px);line-height:1;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+h1 span{color:var(--accent)}
+.status{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:14px;color:var(--hero-muted)}
+.status b{color:var(--hero-ink);font-variant-numeric:tabular-nums}
+nav{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--surface)}
+nav .wrap{display:flex;gap:2px}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:12px 12px 9px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+main{padding-block:20px 48px}
+h2{font-family:var(--display);font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin:0 0 10px;font-weight:700}
+h3{font-size:15px;margin:0 0 6px}
+.muted{color:var(--muted)}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:14px}
+.note.bad{background:var(--bad-bg);color:var(--bad)}
+.note.ok{background:var(--ok-bg);color:var(--ok)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;min-width:0}
+.race-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.race-head strong{font-size:16px}
+.tag{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.pick{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:center;margin-top:6px}
+.rank-no{font-family:var(--display);font-size:20px;font-weight:700;text-align:center;line-height:1}
+.r1{color:var(--gold)}.r2{color:var(--silver)}.r3{color:var(--bronze)}
+input[type=text],input[type=number],input[type=datetime-local],select{width:100%;min-width:0;padding:9px 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg)}
+input:disabled{opacity:.6}
+label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+label.field input,label.field select{margin-top:4px;color:var(--ink)}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:7px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.savestate{font-size:13px;color:var(--muted)}
+details.lb{background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+details.lb summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:12px 14px}
+details.lb summary::-webkit-details-marker{display:none}
+.pos{font-family:var(--display);font-size:26px;font-weight:700;line-height:1;text-align:center}
+.pts{font-family:var(--display);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;text-align:right}
+.pts small{display:block;font-family:var(--body);font-size:11px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.name{font-weight:600;overflow-wrap:anywhere}
+.prize{font-size:13px;color:var(--ok);font-variant-numeric:tabular-nums}
+.paid{font-size:12px;color:var(--muted)}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:1px 9px;border-radius:99px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.open{background:var(--warn-bg);color:var(--warn)}
+#foot{padding-bottom:48px}
+.detail{padding:0 14px 14px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hit{color:var(--ok);font-weight:600}.near{color:var(--warn);font-weight:600}.miss{color:var(--muted)}
+.res{font-size:13px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+ul.rules{padding-left:18px;margin:6px 0 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+.empty{text-align:center;color:var(--muted);padding:28px 8px}
+textarea{width:100%;min-height:150px;border-radius:7px;border:1px solid var(--line);background:var(--bg);padding:8px}
+.person{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.person:first-of-type{border-top:0}
+@media (prefers-reduced-motion:no-preference){.card,details.lb{transition:border-color .15s}}
+</style>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">Tippspiel · Ski-Weltmeisterschaften 1.–14. Februar 2027</p>
+  <h1>Crans-<span>Montana</span> 2027</h1>
+  <div class="status" id="status"></div>
+</div></header>
+<nav><div class="wrap" role="tablist" id="tabs"></div></nav>
+<main class="wrap">
+  <section id="p-rang"></section>
+  <section id="p-tipp" hidden></section>
+  <section id="p-rennen" hidden></section>
+  <section id="p-regeln" hidden></section>
+  <section id="p-admin" hidden></section>
+</main>
+<footer class="wrap" id="foot"></footer>
+<datalist id="athletes"></datalist>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ---------- Vorgaben (aus der Excel-Vorlage und dem FIS-Programm, Stand 22.10.2026) ---------- */
+const DEFAULT_RACES=[
+ {id:'tp',name:'Team Parallel',who:'Team',date:'2027-02-01',time:'11:15'},
+ {id:'sgd',name:'Super G',who:'Damen',date:'2027-02-04',time:'11:15'},
+ {id:'sgh',name:'Super G',who:'Herren',date:'2027-02-05',time:'11:15'},
+ {id:'abd',name:'Abfahrt',who:'Damen',date:'2027-02-06',time:'11:15'},
+ {id:'abh',name:'Abfahrt',who:'Herren',date:'2027-02-07',time:'11:15'},
+ {id:'kd',name:'Team Kombi',who:'Damen',date:'2027-02-09',time:'10:00'},
+ {id:'kh',name:'Team Kombi',who:'Herren',date:'2027-02-10',time:'10:00'},
+ {id:'rd',name:'Riesenslalom',who:'Damen',date:'2027-02-11',time:'10:00'},
+ {id:'rh',name:'Riesenslalom',who:'Herren',date:'2027-02-12',time:'10:00'},
+ {id:'sd',name:'Slalom',who:'Damen',date:'2027-02-13',time:'10:00'},
+ {id:'sh',name:'Slalom',who:'Herren',date:'2027-02-14',time:'10:00'}
+];
+const DEFAULTS={deadline:'2027-01-31T20:00',stake:10,payInfo:'',nation:'Schweiz',medalsActual:null,paid:{},races:DEFAULT_RACES.map(r=>({...r,results:['','','']}))};
+const PTS={win:5,second:3,third:2,podium:1,full:10,medal:[5,4,3,2,1]};
+const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ---------- Firebase-Zugangsdaten: aus der Firebase-Konsole hier einsetzen (siehe ANLEITUNG.txt) ---------- */
+const FIREBASE_CONFIG={
+  apiKey:'AIzaSyDXIacFMlhGIZ7j_7BeIRZcjjE_ZLR2azQ',
+  authDomain:'ski-wm-tippspiel.firebaseapp.com',
+  databaseURL:'https://ski-wm-tippspiel-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:'ski-wm-tippspiel',
+  appId:'1:478931585715:web:bb8130c0a3866184373ec6'
+};
+let admFirst=null, admSecond=null, admLoaded={}, zugOpen=false, invite=null, invAttached=false, autoRes={}, meta=null;
+let db=null, me={uid:null,admin:false}, cfgRemote=null, tips={}, players={}, tipsAll={}, tipsOwn=null, view='rang', target=null;
+let loaded={cfg:false,tips:false,admin:false}, dbError=null, setupMissing=false, tipsAttached=false, openSet=new Set(), saveTimer=null, chain=Promise.resolve();
+
+const rawCfg=()=>{const c=Object.assign({},DEFAULTS,cfgRemote||{}); c.paid=c.paid||{}; c.races=(cfgRemote&&cfgRemote.races)||DEFAULTS.races; return c};
+/* Anzeige-Konfiguration: manuelle Resultate haben Vorrang, sonst gelten die FIS-Resultate */
+const cfg=()=>{
+  const c=rawCfg();
+  c.races=c.races.map(r=>{
+    const man=r.results||['','',''];let rows=null,src='';
+    if(man.length===3&&man.every(x=>norm(x))){rows=man.map((n,i)=>({name:n,rank:i+1,nat:''}));src='manuell'}
+    else if(autoRes[r.id]&&autoRes[r.id].rows){rows=autoRes[r.id].rows;src='FIS'}
+    return Object.assign({},r,{manual:man,rows,src,results:rows?rows.slice(0,3).map(x=>x.name):['','','']});
+  });
+  c.medalsRaw=c.medalsActual;
+  if(c.medalsActual==null&&meta&&meta.complete&&meta.medals){c.medalsActual=meta.medals[canonNat(c.nation)]||0}
+  return c;
+};
+const deadlineMs=()=>Date.parse(cfg().deadline);
+const closed=()=>Date.now()>deadlineMs();
+const fmtDate=(d,t)=>{const x=new Date(d+'T12:00:00');return WD[x.getDay()]+' '+String(x.getDate()).padStart(2,'0')+'.'+String(x.getMonth()+1).padStart(2,'0')+'.'+(t?' · '+t:'')};
+const fmtDT=s=>{const x=new Date(s);return WD[x.getDay()]+' '+x.toLocaleDateString('de-CH')+', '+x.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})+' Uhr'};
+const chf=n=>'CHF '+(Math.round(n*100)/100).toFixed(2).replace(/\.00$/,'.–');
+
+/* ---------- Wertung ---------- */
+function norm(s){return (s||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+const NATS={SUI:['Schweiz','switzerland','suisse','svizzera','ch'],AUT:['Österreich','austria','at'],GER:['Deutschland','germany','de'],ITA:['Italien','italy','italia','it'],FRA:['Frankreich','france','fr'],USA:['USA','united states of america','united states','vereinigte staaten','amerika','us'],NOR:['Norwegen','norway'],SWE:['Schweden','sweden'],CAN:['Kanada','canada'],SLO:['Slowenien','slovenia'],CRO:['Kroatien','croatia'],FIN:['Finnland','finland'],CZE:['Tschechien','czech republic','czechia'],SVK:['Slowakei','slovakia'],BEL:['Belgien','belgium'],NED:['Niederlande','netherlands','holland'],GBR:['Grossbritannien','great britain','england'],JPN:['Japan'],AUS:['Australien','australia'],NZL:['Neuseeland','new zealand'],ESP:['Spanien','spain'],AND:['Andorra'],LIE:['Liechtenstein'],POL:['Polen','poland'],BUL:['Bulgarien','bulgaria'],ROU:['Rumänien','romania'],HUN:['Ungarn','hungary'],UKR:['Ukraine'],CHI:['Chile'],ARG:['Argentinien','argentina'],BRA:['Brasilien','brazil'],KOR:['Südkorea','south korea','korea'],CHN:['China'],LAT:['Lettland','latvia'],EST:['Estland','estonia'],LTU:['Litauen','lithuania'],TUR:['Türkei','turkey'],GRE:['Griechenland','greece'],DEN:['Dänemark','denmark'],ISL:['Island','iceland']};
+const NAT_IDX={};Object.entries(NATS).forEach(([c,l])=>{NAT_IDX[norm(c)]=c;l.forEach(n=>{NAT_IDX[norm(n)]=c})});
+const canonNat=s=>NAT_IDX[norm(s)]||null;
+function lev1(a,b){if(a===b)return true;if(Math.abs(a.length-b.length)>1)return false;let i=0;while(i<a.length&&i<b.length&&a[i]===b[i])i++;if(a.length===b.length)return a.slice(i+1)===b.slice(i+1);return a.length>b.length?a.slice(i+1)===b.slice(i):b.slice(i+1)===a.slice(i)}
+const tokEq=(p,q)=>p===q||(p.length>=6&&q.length>=6&&lev1(p,q));
+function same(a,b){
+  const na=norm(a),nb=norm(b);if(!na||!nb)return false;if(na===nb)return true;
+  const ca=NAT_IDX[na],cb=NAT_IDX[nb];if(ca||cb)return ca===cb;
+  const x=na.split(' '),y=nb.split(' ');
+  const suf=(s,l)=>s.length<=l.length&&s.every((t,i)=>tokEq(t,l[l.length-s.length+i]));
+  if(suf(x,y)||suf(y,x))return true;
+  const ini=(s,l)=>s.length>=2&&l.length>=2&&s[0].length===1&&l[0][0]===s[0]&&suf(s.slice(1),l.slice(1));
+  return ini(x,y)||ini(y,x);
+}
+function hasResult(r){return !!(r.rows&&r.rows.length>=3)}
+function scoreRace(pick,r){
+  const p=pick||['','',''],rows=r.rows;let pts=0;const marks=[];
+  for(let i=0;i<3;i++){
+    if(rows.some(x=>x.rank===i+1&&same(p[i],x.name))){pts+=[PTS.win,PTS.second,PTS.third][i];marks.push('hit')}
+    else if(rows.some(x=>same(p[i],x.name))){pts+=PTS.podium;marks.push('near')}
+    else marks.push('miss');
+  }
+  const full=marks.every(m=>m==='hit');if(full)pts+=PTS.full;
+  return {pts,marks,full};
+}
+function scoreMedals(m,actual){if(m==null||actual==null)return 0;const d=Math.abs(m-actual);return PTS.medal[d]||0}
+function scorePerson(t,c){
+  const rows=[];let total=0;
+  c.races.forEach(r=>{if(!hasResult(r))return;const s=scoreRace(t.picks&&t.picks[r.id],r);total+=s.pts;rows.push({r,s})});
+  const mp=scoreMedals(t.medals,c.medalsActual);total+=mp;
+  return {total,rows,mp};
+}
+function leaderboard(){
+  const c=cfg();
+  const list=Object.entries(tips).filter(([id,t])=>t&&t.name).map(([id,t])=>({id,t,...scorePerson(t,c)}));
+  list.sort((a,b)=>b.total-a.total||a.t.name.localeCompare(b.t.name,'de'));
+  const paidN=list.filter(p=>c.paid[p.id]).length, pot=paidN*Number(c.stake||0);
+  const shares=[1/2,1/3,1/6];
+  let i=0;
+  while(i<list.length){
+    let j=i;while(j+1<list.length&&list[j+1].total===list[i].total)j++;
+    const g=j-i+1;let sum=0;for(let k=i;k<=j;k++)if(k<3)sum+=shares[k];
+    for(let k=i;k<=j;k++){list[k].rank=i+1;list[k].prize=pot*sum/g}
+    i=j+1;
+  }
+  const done=c.races.filter(hasResult).length;
+  return {list,pot,paidN,done,total:c.races.length};
+}
+const revealed=id=>closed()||me.admin||id===me.uid;
+
+/* ---------- Anzeige ---------- */
+const TABS=()=>[['rang','Rangliste'],['tipp','Meine Tipps'],['rennen','Rennen'],['regeln','Reglement']].concat(me.admin?[['admin','Verwaltung']]:[]);
+function renderTabs(){
+  $('#tabs').innerHTML=TABS().map(([k,l])=>`<button role="tab" data-v="${k}" aria-selected="${view===k}">${l}</button>`).join('');
+}
+function renderStatus(){
+  const c=cfg(),lb=leaderboard();let t;
+  const ms=deadlineMs()-Date.now();
+  if(ms>0){const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);t=`Tippschluss in <b>${d} Tg ${h} Std ${m} Min</b>`}
+  else t='<b>Tipps geschlossen</b>';
+  $('#status').innerHTML=`<span>${t}</span><span>Teilnehmer <b>${lb.list.length}</b></span><span>Pot <b>${chf(lb.pot)}</b></span><span>Gewertet <b>${lb.done}/${lb.total}</b> Rennen</span>`;
+}
+function infoNotes(){
+  let h='';
+  if(setupMissing)h+='<div class="note bad">Die Datenbank ist noch nicht verbunden. Bitte die Firebase-Zugangsdaten eintragen (siehe ANLEITUNG.txt).</div>';
+  else if(dbError)h+=`<div class="note bad">Verbindung zur Datenbank gestört (${esc(dbError)}). Seite neu laden.</div>`;
+  else if(db&&!(loaded.cfg&&loaded.tips&&loaded.admin))h+='<div class="note">Daten werden geladen …</div>';
+  return h;
+}
+function renderRang(){
+  const el=$('#p-rang'),c=cfg(),lb=leaderboard();
+  let h=infoNotes()+'<h2>Rangliste</h2>';
+  if(!lb.list.length){h+='<div class="empty">Noch keine Tipps. Unter «Meine Tipps» den Namen eintragen und loslegen.</div>';el.innerHTML=h;return}
+  if(!lb.done)h+='<p class="muted">Sobald das erste Rennen gewertet ist, erscheinen hier die Punkte.</p>';
+  lb.list.forEach(p=>{
+    const show=revealed(p.id);
+    const rows=c.races.map(r=>{
+      const pick=(p.t.picks&&p.t.picks[r.id])||['','',''];
+      const sc=hasResult(r)?scoreRace(pick,r):null;
+      const tipHtml=show?pick.map((x,i)=>`<span class="${sc?sc.marks[i]:''}">${i+1}. ${esc(x||'–')}</span>`).join('<br>'):'<span class="muted">verdeckt</span>';
+      const resHtml=hasResult(r)?r.results.map((x,i)=>`${i+1}. ${esc(x)}`).join('<br>'):'<span class="muted">offen</span>';
+      return `<tr><td>${esc(r.name)}<br><span class="muted">${esc(r.who)}</span></td><td>${tipHtml}</td><td>${resHtml}</td><td class="n">${sc?'+'+sc.pts+(sc.full?' ★':''):'–'}</td></tr>`;
+    }).join('');
+    const med=`<tr><td>Medaillen ${esc(c.nation)}</td><td>${show?(p.t.medals==null?'–':esc(p.t.medals)):'<span class="muted">verdeckt</span>'}</td><td>${c.medalsActual==null?'<span class="muted">offen</span>':esc(c.medalsActual)}</td><td class="n">${c.medalsActual==null?'–':'+'+p.mp}</td></tr>`;
+    const cls=p.rank<=3&&lb.done?' r'+p.rank:'';
+    h+=`<details class="lb" data-id="${esc(p.id)}"${openSet.has(p.id)?' open':''}><summary>
+      <div class="pos${cls}">${p.rank}</div>
+      <div><div class="name">${esc(p.t.name)}${p.id===me.uid?' <span class="tag">du</span>':''}</div>
+      <div class="paid"><span class="chip ${c.paid[p.id]?'ok':'open'}">${c.paid[p.id]?'bezahlt':'Einsatz offen'}</span>${lb.done&&p.prize>0?` · <span class="prize">Gewinn ${chf(p.prize)}</span>`:''}</div></div>
+      <div class="pts">${p.total}<small>Punkte</small></div></summary>
+      <div class="detail"><table><thead><tr><th>Rennen</th><th>Tipp</th><th>Resultat</th><th>Pkt</th></tr></thead><tbody>${rows}${med}</tbody></table>
+      ${show?'':'<p class="muted" style="margin:8px 0 0">Die Tipps der anderen werden nach Tippschluss sichtbar.</p>'}</div></details>`;
+  });
+  h+=`<p class="muted" style="font-size:13px">Auszahlung: ${chf(lb.pot)} im Pot (${lb.paidN} bezahlte Einsätze). Sieger 1/2, Platz 2 ein Drittel, Platz 3 ein Sechstel. Bei Punktgleichheit wird geteilt. ★ = ganzes Podest in der richtigen Reihenfolge.</p>`;
+  el.innerHTML=h;
+}
+function textExport(id){
+  const c=cfg(),t=tips[id]||{};
+  return (t.name||'Name')+'\n'+c.races.map(r=>`${r.name} ${r.who}: ${((t.picks&&t.picks[r.id])||['','','']).map(x=>x||'–').join(' / ')}`).join('\n')+`\nMedaillen ${c.nation}: ${t.medals==null?'–':t.medals}`;
+}
+function renderTipp(force){
+  const el=$('#p-tipp');
+  if(!force&&el.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))return;
+  const c=cfg();let h=infoNotes()+'<h2>Meine Tipps</h2>';
+  if(!db){el.innerHTML=h;return}
+  if(!me.uid){el.innerHTML=h+'<div class="note bad">Du bist nicht angemeldet.</div>';return}
+  const tid=target||me.uid, t=tips[tid];
+  if(me.admin){
+    const opts=Object.entries(tips).filter(([id,x])=>x&&x.name).map(([id,x])=>`<option value="${esc(id)}"${id===tid?' selected':''}>${esc(x.name)}</option>`).join('');
+    h+=`<label class="field">Tipps bearbeiten für (nur Verwaltung)<select id="tsel"><option value="${esc(me.uid)}"${tid===me.uid?' selected':''}>Ich${tips[me.uid]?' ('+esc(tips[me.uid].name)+')':' (neu)'}</option>${opts.replace(new RegExp(`<option value="${me.uid}"[^>]*>[^<]*</option>`),'')}</select></label>`;
+  }
+  const lock=closed()&&!me.admin;
+  if(lock)h+=`<div class="note">Tippschluss war ${esc(fmtDT(c.deadline))}. Tipps können nicht mehr geändert werden.</div>`;
+  else h+=`<p class="muted">Tippschluss: ${esc(fmtDT(c.deadline))}. Änderungen werden automatisch gespeichert.</p>`;
+  if(!t||!t.name){
+    h+=`<div class="card"><label class="field">Dein Name in der Rangliste<input type="text" id="tname" maxlength="40" placeholder="z. B. Martin" autocomplete="nickname"></label><button class="btn" id="tnameBtn">Weiter</button></div>`;
+    el.innerHTML=h;return;
+  }
+  const dis=lock?' disabled':'';
+  const isPaid=c.paid[tid];
+  h+=`<div class="note ${isPaid?'ok':''}">Einsatz ${chf(c.stake)}: <b>${isPaid?'bezahlt':'noch offen'}</b>${!isPaid&&c.payInfo?' · '+esc(c.payInfo):''}</div>`;
+  h+=`<p><strong>${esc(t.name)}</strong> <button class="btn sec small" id="tren"${dis}>Name ändern</button></p>`;
+  c.races.forEach(r=>{
+    const pick=(t.picks&&t.picks[r.id])||['','',''];
+    const sc=hasResult(r)?scoreRace(pick,r):null;
+    h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><span class="tag">${esc(fmtDate(r.date,r.time))}</span></div>`+
+      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" list="athletes" id="t-${r.id}-${i}" value="${esc(pick[i])}" placeholder="${i===0?'Sieger':i===1?'Zweiter':'Dritter'}"${dis} autocomplete="off"></div>`).join('')+
+      (sc?`<div class="res">Resultat: ${r.results.map((x,i)=>`${i+1}. ${esc(x)}`).join(' · ')} → <strong>+${sc.pts} Punkte</strong></div>`:'')+`</div>`;
+  });
+  h+=`<div class="card"><div class="race-head"><strong>Medaillen ${esc(c.nation)}</strong><span class="tag">Zusatzfrage</span></div><label class="field">Wie viele Medaillen gewinnt ${esc(c.nation)} an dieser WM insgesamt?<input type="number" id="t-medals" min="0" max="40" inputmode="numeric" value="${t.medals==null?'':esc(t.medals)}"${dis}></label></div>`;
+  h+=`<div class="row"><span class="savestate" id="savestate"></span><button class="btn sec small" id="copyBtn">Tipps als Text anzeigen</button></div><div id="copyBox"></div>`;
+  el.innerHTML=h;
+  fillAthletes();
+}
+function renderRennen(){
+  const c=cfg();let h='<h2>Rennen</h2><p class="muted">Programm laut FIS, Zeit = Start 1. Lauf (Ortszeit). Die Resultate werden automatisch von fis-ski.com übernommen'+(meta&&meta.checked?' (letzter Abgleich: '+esc(new Date(meta.checked).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'}))+')':'')+'.</p>';
+  c.races.forEach(r=>{
+    h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><span class="tag">${esc(fmtDate(r.date,r.time))}</span></div>`+
+      (hasResult(r)?`<div><span class="tag">${r.src==='FIS'?'offiziell von FIS':'manuell eingetragen'}</span>${r.results.map((x,i)=>`<div><span class="rank-no r${i+1}" style="display:inline-block;width:24px">${i+1}</span> ${esc(x)}</div>`).join('')}</div>`:'<span class="muted">Resultat noch offen</span>')+'</div>';
+  });
+  $('#p-rennen').innerHTML=h;
+}
+function renderRegeln(){
+  const c=cfg();
+  $('#p-regeln').innerHTML=`<h2>Reglement</h2>
+  <h3>1. Einsatz</h3><p>${chf(c.stake)} pro Person.</p>
+  <h3>2. Punktewertung pro Rennen</h3>
+  <ul class="rules"><li>Sieger richtig: <b>${PTS.win}</b></li><li>2. Platz richtig: <b>${PTS.second}</b></li><li>3. Platz richtig: <b>${PTS.third}</b></li>
+  <li>Podest getroffen, aber auf dem falschen Platz: <b>${PTS.podium}</b></li><li>Ganzes Podest in der richtigen Reihenfolge: <b>+${PTS.full}</b> Bonus</li></ul>
+  <h3>Medaillen ${esc(c.nation)}</h3><p>Genau richtig ${PTS.medal[0]}, eine daneben ${PTS.medal[1]}, zwei daneben ${PTS.medal[2]}, drei daneben ${PTS.medal[3]}, vier daneben ${PTS.medal[4]} Punkte.</p>
+  <h3>3. Gewinnausschüttung</h3><ul class="rules"><li>Sieger: die Hälfte des Pots</li><li>2. Platz: zwei Drittel davon (ein Drittel des Pots)</li><li>3. Platz: ein Drittel davon (ein Sechstel des Pots)</li></ul>
+  <h3>4. Anmeldeschluss</h3><p>${esc(fmtDT(c.deadline))}. Bis dann muss der Einsatz bezahlt und der Tipp abgegeben sein. Die Tipps der anderen sind erst nach Tippschluss sichtbar.</p>
+  <p class="muted">Namen werden ohne Beachtung von Gross-/Kleinschreibung und Akzenten verglichen. Der Nachname allein genügt (z. B. «Odermatt»), kleine Tippfehler werden verziehen. Bei Teamrennen zählt die Nation (z. B. «Schweiz»). Die Resultate übernimmt die Seite automatisch von fis-ski.com.</p>`;
+}
+function renderAdmin(force){
+  const el=$('#p-admin');
+  if(!me.admin){el.innerHTML='';return}
+  if(!force&&el.contains(document.activeElement)&&document.activeElement.matches('input,select'))return;
+  const c=cfg(),stake=Number(c.stake)||0;
+  const ppl=Object.entries(tips).filter(([id,t])=>t&&t.name).sort((a,b)=>(!!c.paid[a[0]]-!!c.paid[b[0]])||a[1].name.localeCompare(b[1].name,'de'));
+  const paidN=ppl.filter(([id])=>c.paid[id]).length;
+  let h='<h2>Zahlungen</h2><div class="card"><div class="grid2"><div class="pts" style="text-align:left" id="a-sum1">'+paidN+' / '+ppl.length+'<small>bezahlt</small></div><div class="pts" style="text-align:left" id="a-sum2">'+chf(paidN*stake)+'<small>eingenommen · offen '+chf((ppl.length-paidN)*stake)+'</small></div></div></div>';
+  h+='<h2>Teilnehmer</h2><div class="card" id="a-people">';
+  if(!ppl.length)h+='<span class="muted">Noch niemand angemeldet.</span>';
+  ppl.forEach(([id,t])=>{const p=c.paid[id];h+=`<div class="person"><span><span class="name">${esc(t.name)}</span> <span class="chip ${p?'ok':'open'}">${p?'bezahlt':'offen'}</span>${id.startsWith('p_')?' <span class="tag">von dir erfasst</span>':''}</span><span class="row"><button class="btn small ${p?'sec':''}" data-pay="${esc(id)}">${p?'Zahlung zurücknehmen':'Als bezahlt markieren'}</button><button class="btn sec small" data-edit="${esc(id)}">Tipps</button><button class="btn sec small" data-del="${esc(id)}">Löschen</button></span></div>`});
+  h+=`</div><div class="card"><h3>Teilnehmer ohne Zugang erfassen</h3><p class="muted">Für alle, die ihre Tipps per Nachricht schicken.</p><div class="row"><input type="text" id="a-newname" placeholder="Name" style="flex:1;min-width:160px"><button class="btn" id="a-add">Hinzufügen</button></div></div>`;
+  h+=`<h2>Organisatoren</h2><div class="card"><p class="muted">Es sind höchstens zwei Organisatoren möglich. Die zweite Person öffnet den Link, klappt unten «Organisator-Zugang» auf und gibt diesen Code ein.</p><div class="row"><code id="inv" style="font-size:18px;letter-spacing:.08em">${esc(invite||'–')}</code><button class="btn sec small" id="invNew">Neuen Code erzeugen</button></div></div>`;
+  h+='<h2>Einstellungen</h2><div class="card"><div class="grid2"><label class="field">Tippschluss<input type="datetime-local" id="a-deadline" value="'+esc(c.deadline)+'"></label><label class="field">Einsatz (CHF)<input type="number" id="a-stake" min="0" step="0.5" value="'+esc(c.stake)+'"></label><label class="field">Nation für Medaillen-Tipp<input type="text" id="a-nation" value="'+esc(c.nation)+'"></label><label class="field">Tatsächliche Medaillen (leer = offen)<input type="number" id="a-medals" min="0" value="'+(c.medalsRaw==null?'':esc(c.medalsRaw))+'" placeholder="'+(c.medalsRaw==null&&c.medalsActual!=null?'FIS: '+esc(c.medalsActual):'')+'"></label></div><label class="field">Zahlungshinweis für alle (z. B. «Twint an Martin, 079 …»)<input type="text" id="a-pay" value="'+esc(c.payInfo||'')+'"></label></div>';
+  h+='<h2>Resultate</h2><p class="muted">Die Resultate kommen automatisch von fis-ski.com (grau angezeigt). Nur ausfüllen, wenn FIS fehlt oder falsch ist: Eigene Eingaben haben Vorrang.</p>';
+  c.races.forEach(r=>{
+    h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><div class="row"><input type="text" id="a-${r.id}-date" value="${esc(r.date)}" style="width:130px" aria-label="Datum JJJJ-MM-TT"><input type="text" id="a-${r.id}-time" value="${esc(r.time)}" placeholder="Zeit" style="width:80px" aria-label="Zeit"></div></div>`+
+      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" list="athletes" id="a-${r.id}-${i}" value="${esc((r.manual||[])[i]||'')}" placeholder="${esc(((autoRes[r.id]||{}).rows||[])[i]?autoRes[r.id].rows[i].name:'')}" autocomplete="off"></div>`).join('')+'</div>';
+  });
+  h+='<div class="row"><button class="btn" id="a-save">Einstellungen und Resultate speichern</button><span class="savestate" id="a-state"></span></div>';
+  el.innerHTML=h;fillAthletes();
+}function fillAthletes(){
+  const set=new Map();
+  const add=x=>{const k=norm(x);if(k&&!set.has(k))set.set(k,x.trim())};
+  Object.values(tips).forEach(t=>t&&t.picks&&Object.values(t.picks).forEach(a=>(a||[]).forEach(add)));
+  cfg().races.forEach(r=>(r.results||[]).forEach(add));
+  $('#athletes').innerHTML=[...set.values()].sort((a,b)=>a.localeCompare(b,'de')).map(x=>`<option value="${esc(x)}">`).join('');
+}
+function renderAll(){
+  renderTabs();renderStatus();renderFoot();
+  ['rang','tipp','rennen','regeln','admin'].forEach(k=>$('#p-'+k).hidden=view!==k);
+  if(view==='rang')renderRang();
+  if(view==='tipp')renderTipp();
+  if(view==='rennen')renderRennen();
+  if(view==='regeln')renderRegeln();
+  if(view==='admin')renderAdmin();
+}
+function go(v){view=v;if(v==='tipp'||v==='admin'){renderTabs();renderStatus();['rang','tipp','rennen','regeln','admin'].forEach(k=>$('#p-'+k).hidden=view!==k);v==='tipp'?renderTipp(true):renderAdmin(true)}else renderAll();window.scrollTo(0,0)}
+
+/* ---------- Schreiben ---------- */
+const queue=fn=>{chain=chain.then(fn).catch(e=>{console.warn(e)});return chain};
+function setState(id,msg,bad){const e=$('#'+id);if(e){e.textContent=msg;e.style.color=bad?'var(--bad)':''}}
+async function saveTip(tid,patch,stateId){
+  if(!db)return;
+  try{
+    if(patch.name!==undefined)await db.ref('players/'+tid).set({name:patch.name});
+    if(patch.picks!==undefined)await db.ref('tips/'+tid).set({picks:patch.picks,medals:patch.medals==null?null:patch.medals,updated:Date.now()});
+    setState(stateId,'Gespeichert')
+  }catch(e){setState(stateId,e&&e.code==='PERMISSION_DENIED'?'Nicht erlaubt (Tippschluss vorbei?)':'Speichern nicht möglich',true)}
+}
+function collectTip(){
+  const picks={};cfg().races.forEach(r=>{picks[r.id]=[0,1,2].map(i=>($(`#t-${r.id}-${i}`)||{value:''}).value.trim())});
+  const m=$('#t-medals');return {picks,medals:m&&m.value!==''?Number(m.value):null};
+}
+function scheduleSave(){
+  const tid=target||me.uid;setState('savestate','Speichert …');clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>queue(()=>saveTip(tid,collectTip(),'savestate')),700);
+}
+function saveCfg(next,stateId){return queue(async()=>{try{next.deadlineMs=Date.parse(next.deadline);await db.ref('config').set(next);setState(stateId,'Gespeichert')}catch(e){setState(stateId,'Speichern nicht möglich',true)}})}
+function collectCfg(){
+  const c=rawCfg();const next={payInfo:$('#a-pay').value.trim(),deadline:$('#a-deadline').value||c.deadline,stake:Number($('#a-stake').value)||0,nation:$('#a-nation').value.trim()||'Schweiz',medalsActual:$('#a-medals').value===''?null:Number($('#a-medals').value),paid:c.paid};
+  next.races=c.races.map(r=>({id:r.id,name:r.name,who:r.who,date:$(`#a-${r.id}-date`).value.trim()||r.date,time:$(`#a-${r.id}-time`).value.trim(),results:[0,1,2].map(i=>$(`#a-${r.id}-${i}`).value.trim())}));
+  return next;
+}
+
+/* ---------- Ereignisse ---------- */
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('button,input[data-paid]');if(!t)return;
+  if(t.dataset.v)return go(t.dataset.v);
+  if(t.id==='codeBtn'){
+    const code=$('#codeIn').value.trim();
+    try{
+      if(code)await db.ref('admin/second').set({uid:me.uid,code});else await db.ref('admin/first').set(me.uid);
+      if(!code){await saveCfg(rawCfg(),'codeState');await db.ref('adminInvite').set(randCode())}
+      setState('codeState','Du bist jetzt Organisator.');
+    }catch(e){setState('codeState','Nicht möglich: Code falsch, oder es gibt schon zwei Organisatoren.',true)}
+    return}
+  if(t.id==='invNew'){await queue(async()=>{try{await db.ref('adminInvite').set(randCode())}catch(_){}});return}
+  if(t.id==='tnameBtn'){const n=$('#tname').value.trim().slice(0,40);if(!n)return;const tid=target||me.uid;await queue(()=>saveTip(tid,{name:n},'savestate'));return}
+  if(t.id==='tren'){const box=document.createElement('div');box.className='card';box.innerHTML='<label class="field">Neuer Name<input type="text" id="tname2" maxlength="40"></label><button class="btn" id="tname2Btn">Speichern</button>';t.closest('p').after(box);$('#tname2').value=(tips[target||me.uid]||{}).name||'';$('#tname2').focus();return}
+  if(t.id==='tname2Btn'){const n=$('#tname2').value.trim().slice(0,40);if(n){await queue(()=>saveTip(target||me.uid,{name:n},'savestate'));renderTipp(true)}return}
+  if(t.id==='copyBtn'){const tid=target||me.uid,txt=textExport(tid);$('#copyBox').innerHTML='<textarea id="copyTa" readonly></textarea>';const ta=$('#copyTa');ta.value=txt;ta.select();try{await navigator.clipboard.writeText(txt)}catch(_){}return}
+  if(t.id==='a-save'){setState('a-state','Speichert …');await saveCfg(collectCfg(),'a-state');return}
+  if(t.dataset.pay){const c=rawCfg();c.paid=Object.assign({},c.paid,{[t.dataset.pay]:c.paid[t.dataset.pay]?false:Date.now()});await saveCfg(c,'a-state');return}
+  if(t.dataset.edit){target=t.dataset.edit;go('tipp');return}
+  if(t.dataset.del){
+    if(t.dataset.arm!=='1'){t.dataset.arm='1';t.textContent='Wirklich löschen?';return}
+    await queue(async()=>{try{await db.ref('tips/'+t.dataset.del).remove();await db.ref('players/'+t.dataset.del).remove()}catch(_){}});return;
+  }
+  if(t.id==='a-add'){const n=$('#a-newname').value.trim().slice(0,40);if(!n)return;const id='p_'+Math.random().toString(36).slice(2,10);await queue(()=>saveTip(id,{name:n},'a-state'));$('#a-newname').value='';return}
+});
+document.addEventListener('input',e=>{if(e.target.matches('#p-tipp input[id^="t-"]'))scheduleSave()});
+document.addEventListener('change',e=>{
+  if(e.target.id==='tsel'){target=e.target.value;renderTipp(true)}
+});
+document.addEventListener('toggle',e=>{const d=e.target;if(d.matches&&d.matches('details.lb')){d.open?openSet.add(d.dataset.id):openSet.delete(d.dataset.id)}if(d.id==='zug')zugOpen=d.open},true);
+const randCode=()=>Array.from({length:8},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+function renderFoot(){
+  const el=$('#foot');if(!db||!me.uid){el.innerHTML='';return}
+  if(el.contains(document.activeElement)&&document.activeElement.matches('input'))return;
+  if(me.admin){el.innerHTML='<p class="muted">Du bist Organisator.</p>';return}
+  el.innerHTML=`<details id="zug"${zugOpen?' open':''}><summary class="muted" style="cursor:pointer">Organisator-Zugang</summary><div class="card" style="margin-top:8px"><p class="muted">Nur für die zwei Organisatoren. Die erste Person lässt das Feld leer, die zweite gibt den Einladungscode der ersten ein.</p><div class="row"><input type="text" id="codeIn" placeholder="Einladungscode" style="flex:1;min-width:160px" autocomplete="off"><button class="btn" id="codeBtn">Übernehmen</button></div><div class="savestate" id="codeState"></div></div></details>`;
+}
+
+/* ---------- Start ---------- */
+renderAll();
+setInterval(renderStatus,30000);
+function rebuild(){
+  const raw=Object.assign({},tipsAll);if(me.uid&&tipsOwn)raw[me.uid]=tipsOwn;
+  tips={};Object.keys(players).forEach(id=>{tips[id]=Object.assign({},raw[id]||{},{name:(players[id]||{}).name})});
+  fillAthletes();renderAll();
+}
+function attachTips(){
+  if(!db||tipsAttached||!(me.admin||Date.now()>deadlineMs()-5*60000))return;
+  tipsAttached=true;
+  db.ref('tips').on('value',s=>{tipsAll=s.val()||{};rebuild()},()=>{tipsAttached=false});
+}
+(async()=>{
+  const bad=!window.firebase||Object.values(FIREBASE_CONFIG).some(v=>!v||v==='HIER_EINTRAGEN');
+  if(bad){setupMissing=true;renderAll();return}
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const cred=await firebase.auth().signInAnonymously();me.uid=cred.user.uid;
+    db=firebase.database();
+  }catch(e){dbError=(e&&e.code)||'Anmeldung';renderAll();return}
+  const err=e=>{dbError=(e&&e.code)||'Fehler';renderAll()};
+  const admUpd=()=>{
+    me.admin=admFirst===me.uid||admSecond===me.uid;
+    if(admLoaded.f&&admLoaded.s)loaded.admin=true;
+    if(me.admin&&!invAttached){invAttached=true;db.ref('adminInvite').on('value',x=>{invite=x.val();renderAdmin()},()=>{})}
+    attachTips();renderAll()};
+  db.ref('admin/first').on('value',s=>{admFirst=s.val();admLoaded.f=true;admUpd()},err);
+  db.ref('admin/second/uid').on('value',s=>{admSecond=s.val();admLoaded.s=true;admUpd()},err);
+  db.ref('config').on('value',s=>{cfgRemote=s.val();loaded.cfg=true;fillAthletes();attachTips();renderAll()},err);
+  db.ref('players').on('value',s=>{players=s.val()||{};loaded.tips=true;rebuild()},err);
+  db.ref('results').on('value',s=>{autoRes=s.val()||{};renderAll()},()=>{});
+  db.ref('meta').on('value',s=>{meta=s.val();renderAll()},()=>{});
+  db.ref('tips/'+me.uid).on('value',s=>{tipsOwn=s.val();rebuild()},()=>{});
+  setInterval(attachTips,30000);
+  setTimeout(()=>{if(!(loaded.cfg&&loaded.tips&&loaded.admin)){dbError='keine Antwort';renderAll()}},10000);
+})();
+</script>
+
+</body></html>

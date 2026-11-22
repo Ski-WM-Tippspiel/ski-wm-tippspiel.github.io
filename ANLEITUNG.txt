@@ -1,0 +1,65 @@
+﻿EINRICHTUNG TIPPSPIEL SKI-WM CRANS-MONTANA 2027 (einmalig, ca. 30 Minuten)
+
+TEIL A: FIREBASE (Datenbank)
+
+1. Projekt anlegen
+   https://console.firebase.google.com -> "Projekt erstellen" -> Name z. B. ski-wm-tippspiel -> Google Analytics ausschalten.
+
+2. Anmeldung ohne Konto erlauben
+   Linke Leiste -> "Sicherheit" aufklappen -> "Authentication" (früher unter "Build") -> "Los geht's" -> Tab "Anmeldemethode" -> "Anonym" aktivieren -> Speichern.
+
+3. Datenbank anlegen
+   Linke Leiste -> "Datenbanken und Speicher" aufklappen -> "Realtime Database" (früher unter "Build"; steht evtl. auch unter "Projektverknüpfungen") -> "Datenbank erstellen" -> Standort Belgien (europe-west1) -> "Im gesperrten Modus starten".
+   Dann Tab "Regeln": den ganzen Inhalt der Datei database.rules.json einfügen -> "Veröffentlichen".
+   Die URL der Datenbank (https://....firebasedatabase.app) notieren.
+
+4. Zugangsdaten der Web-App holen
+   Linke Leiste -> "Einstellungen" (Zahnrad) -> "Projekteinstellungen" -> Tab "Allgemein" -> ganz nach unten scrollen zu "Meine Apps" -> Web-Symbol </> -> Name eingeben, Hosting NICHT anhaken -> App registrieren.
+   Den Block "const firebaseConfig = { ... }" kopieren (muss databaseURL enthalten).
+   Die Werte in index.html bei FIREBASE_CONFIG eintragen (oder den Block an Claude schicken).
+
+5. Schlüssel für den automatischen Resultate-Abgleich
+   Projekteinstellungen -> Tab "Dienstkonten" -> "Firebase Admin SDK", Node.js ausgewählt lassen -> nach unten scrollen -> "Neuen privaten Schlüssel generieren" -> bestätigen -> JSON-Datei speichern.
+   Diese Datei ist GEHEIM. Nicht weitergeben, nicht ins Repository legen.
+
+TEIL B: GITHUB (kostenlos: Webseite + automatische FIS-Resultate)
+
+6. Konto und Repository
+   https://github.com -> Konto anlegen -> "New repository" -> Name z. B. ski-wm-tippspiel -> PUBLIC (nötig für kostenloses Hosting).
+   Den gesamten Inhalt dieses Ordners (tippspiel-web) hochladen: "uploading an existing file" -> Dateien UND Ordner
+   (.github, scripts) hineinziehen. ANLEITUNG.txt und database.rules.json müssen nicht hoch, schaden aber nicht.
+   Wichtig: der versteckte Ordner ".github" muss dabei sein, sonst läuft der Abgleich nicht.
+
+7. Webseite veröffentlichen
+   Repository -> Settings -> Pages -> "Deploy from a branch" -> Branch main, Ordner / (root) -> Save.
+   Nach 1-2 Minuten erscheint der Link (https://DEINNAME.github.io/ski-wm-tippspiel/). Das ist der Link für alle.
+
+8. Geheimnisse für den Abgleich hinterlegen
+   Repository -> Settings -> Secrets and variables -> Actions -> "New repository secret":
+   - FIREBASE_SERVICE_ACCOUNT = kompletter Inhalt der JSON-Datei aus Schritt 5
+   - FIREBASE_DATABASE_URL    = Datenbank-URL aus Schritt 3
+
+9. Abgleich testen
+   Repository -> Tab "Actions" -> "FIS-Resultate abgleichen" -> "Run workflow" (Haken "Nur testen" lassen).
+   Im Protokoll muss stehen: "11 WM-Rennen gefunden". Vor der WM ist "offiziell: 0" normal.
+   Während der WM läuft der Abgleich alle 10 Minuten zwischen 8 und 18 Uhr (31.1. und 1.-20.2.2027) von selbst.
+   Hinweis: GitHub pausiert geplante Abläufe, wenn das Repository 60 Tage lang unverändert ist.
+   Darum Anfang Januar 2027 einmal im Tab "Actions" nachsehen und ggf. "Enable workflow" klicken.
+
+TEIL C: ORGANISATOREN UND ZAHLUNGEN
+
+10. Zwei Organisatoren festlegen
+   a) Person 1 öffnet den Link als ERSTE, bevor er verteilt wird: unten "Organisator-Zugang" aufklappen, Feld leer lassen, "Übernehmen".
+   b) Unter "Verwaltung" -> "Organisatoren" steht ein Einladungscode. Person 1 schickt ihn Person 2.
+   c) Person 2 öffnet den Link, klappt "Organisator-Zugang" auf, gibt den Code ein, "Übernehmen".
+   Mehr als zwei Organisatoren sind nicht möglich. Die Rolle hängt am Browser/Gerät: Browser-Speicher nicht löschen.
+   Notfall (Rolle verloren): in der Firebase-Konsole unter Realtime Database den Eintrag "admin" löschen, dann neu einrichten.
+
+11. Zahlungen
+   Unter "Verwaltung" -> "Teilnehmer" bei jeder Person "Als bezahlt markieren". Oben steht die Summe (bezahlt/offen, CHF).
+   Im Feld "Zahlungshinweis" (Einstellungen) steht z. B. "Twint an ...". Das sehen alle, die noch nicht bezahlt haben.
+
+RESULTATE
+   Kommen automatisch von fis-ski.com (nur "Official results"). Die Medaillen der Schweiz werden am Ende der WM automatisch gezählt.
+   Falls FIS ein Resultat falsch oder gar nicht liefert: unter "Verwaltung" -> "Resultate" von Hand eintragen. Das hat Vorrang.
+   Leert man die Felder wieder, gilt FIS erneut.

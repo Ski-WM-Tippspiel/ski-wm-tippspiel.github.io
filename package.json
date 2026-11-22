@@ -1,0 +1,9 @@
+{
+  "name": "tippspiel-ski-wm",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^12.2.0",
+    "jsdom": "^24.1.0"
+  }
+}

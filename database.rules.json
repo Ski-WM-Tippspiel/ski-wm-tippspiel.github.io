@@ -1,0 +1,41 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "admin": {
+      "first": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists() && newData.val() === auth.uid"
+      },
+      "second": {
+        "uid": { ".read": "auth != null" },
+        ".write": "auth != null && !data.exists() && root.child('admin/first').exists() && root.child('admin/first').val() !== auth.uid && newData.child('uid').val() === auth.uid && newData.child('code').val() === root.child('adminInvite').val()",
+        ".validate": "newData.hasChildren(['uid', 'code'])"
+      }
+    },
+    "adminInvite": {
+      ".read": "auth != null && (root.child('admin/first').val() === auth.uid || root.child('admin/second/uid').val() === auth.uid)",
+      ".write": "auth != null && (root.child('admin/first').val() === auth.uid || root.child('admin/second/uid').val() === auth.uid)"
+    },
+    "config": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('admin/first').val() === auth.uid || root.child('admin/second/uid').val() === auth.uid)"
+    },
+    "results": { ".read": "auth != null", ".write": false },
+    "meta": { ".read": "auth != null", ".write": false },
+    "players": {
+      ".read": "auth != null",
+      "$id": {
+        ".write": "auth != null && (auth.uid === $id || (root.child('admin/first').val() === auth.uid || root.child('admin/second/uid').val() === auth.uid))",
+        ".validate": "newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 40"
+      }
+    },
+    "tips": {
+      ".read": "auth != null && ((root.child('admin/first').val() === auth.uid || root.child('admin/second/uid').val() === auth.uid) || now > root.child('config/deadlineMs').val())",
+      "$id": {
+        ".read": "auth != null && auth.uid === $id",
+        ".write": "auth != null && ((auth.uid === $id && now < root.child('config/deadlineMs').val()) || (root.child('admin/first').val() === auth.uid || root.child('admin/second/uid').val() === auth.uid))"
+      }
+    }
+  }
+}
