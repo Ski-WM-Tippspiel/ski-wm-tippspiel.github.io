@@ -329,7 +329,7 @@ function renderAdmin(force){
   if(!ppl.length)h+='<span class="muted">Noch niemand angemeldet.</span>';
   ppl.forEach(([id,t])=>{const p=c.paid[id];h+=`<div class="person"><span><span class="name">${esc(t.name)}</span> <span class="chip ${p?'ok':'open'}">${p?'bezahlt':'offen'}</span>${id.startsWith('p_')?' <span class="tag">von dir erfasst</span>':''}</span><span class="row"><button class="btn small ${p?'sec':''}" data-pay="${esc(id)}">${p?'Zahlung zurücknehmen':'Als bezahlt markieren'}</button><button class="btn sec small" data-edit="${esc(id)}">Tipps</button><button class="btn sec small" data-del="${esc(id)}">Löschen</button></span></div>`});
   h+=`</div><div class="card"><h3>Teilnehmer ohne Zugang erfassen</h3><p class="muted">Für alle, die ihre Tipps per Nachricht schicken.</p><div class="row"><input type="text" id="a-newname" placeholder="Name" style="flex:1;min-width:160px"><button class="btn" id="a-add">Hinzufügen</button></div></div>`;
-  h+=`<h2>Organisatoren</h2><div class="card"><p class="muted">Es sind höchstens zwei Organisatoren möglich. Die zweite Person öffnet den Link, klappt unten «Organisator-Zugang» auf und gibt diesen Code ein.</p><div class="row"><code id="inv" style="font-size:18px;letter-spacing:.08em">${esc(invite||'–')}</code><button class="btn sec small" id="invNew">Neuen Code erzeugen</button></div></div>`;
+  h+=`<h2>Organisatoren</h2><div class="card"><p class="muted">Mit diesem Code wird jedes weitere Gerät (zum Beispiel dein Handy) oder die zweite Person Organisator: Link öffnen, unten «Organisator-Zugang» aufklappen, Code eingeben. Gib den Code nur an Vertraute weiter und erzeuge danach einen neuen, damit der alte nicht mehr gilt.</p><div class="row"><code id="inv" style="font-size:18px;letter-spacing:.08em">${esc(invite||'–')}</code><button class="btn sec small" id="invNew">Neuen Code erzeugen</button></div></div>`;
   h+='<h2>Einstellungen</h2><div class="card"><div class="grid2"><label class="field">Tippschluss<input type="datetime-local" id="a-deadline" value="'+esc(c.deadline)+'"></label><label class="field">Einsatz (CHF)<input type="number" id="a-stake" min="0" step="0.5" value="'+esc(c.stake)+'"></label><label class="field">Nation für Medaillen-Tipp<input type="text" id="a-nation" value="'+esc(c.nation)+'"></label><label class="field">Tatsächliche Medaillen (leer = offen)<input type="number" id="a-medals" min="0" value="'+(c.medalsRaw==null?'':esc(c.medalsRaw))+'" placeholder="'+(c.medalsRaw==null&&c.medalsActual!=null?'FIS: '+esc(c.medalsActual):'')+'"></label></div><label class="field">Zahlungshinweis für alle (z. B. «Twint an Martin, 079 …»)<input type="text" id="a-pay" value="'+esc(c.payInfo||'')+'"></label></div>';
   h+='<h2>Resultate</h2><p class="muted">Die Resultate kommen automatisch von fis-ski.com (grau angezeigt). Nur ausfüllen, wenn FIS fehlt oder falsch ist: Eigene Eingaben haben Vorrang.</p>';
   c.races.forEach(r=>{
@@ -389,10 +389,10 @@ document.addEventListener('click',async e=>{
   if(t.id==='codeBtn'){
     const code=$('#codeIn').value.trim();
     try{
-      if(code)await db.ref('admin/second').set({uid:me.uid,code});else await db.ref('admin/first').set(me.uid);
+      if(code)await db.ref('admin/devices/'+me.uid).set({code});else await db.ref('admin/first').set(me.uid);
       if(!code){await saveCfg(rawCfg(),'codeState');await db.ref('adminInvite').set(randCode())}
       setState('codeState','Du bist jetzt Organisator.');
-    }catch(e){setState('codeState','Nicht möglich: Code falsch, oder es gibt schon zwei Organisatoren.',true)}
+    }catch(e){setState('codeState','Nicht möglich: Der Code ist falsch oder nicht mehr gültig.',true)}
     return}
   if(t.id==='invNew'){await queue(async()=>{try{await db.ref('adminInvite').set(randCode())}catch(_){}});return}
   if(t.id==='tnameBtn'){const n=$('#tname').value.trim().slice(0,40);if(!n)return;const tid=target||me.uid;await queue(()=>saveTip(tid,{name:n},'savestate'));return}
@@ -418,7 +418,7 @@ function renderFoot(){
   const el=$('#foot');if(!db||!me.uid){el.innerHTML='';return}
   if(el.contains(document.activeElement)&&document.activeElement.matches('input'))return;
   if(me.admin){el.innerHTML='<p class="muted">Du bist Organisator.</p>';return}
-  el.innerHTML=`<details id="zug"${zugOpen?' open':''}><summary class="muted" style="cursor:pointer">Organisator-Zugang</summary><div class="card" style="margin-top:8px"><p class="muted">Nur für die zwei Organisatoren. Die erste Person lässt das Feld leer, die zweite gibt den Einladungscode der ersten ein.</p><div class="row"><input type="text" id="codeIn" placeholder="Einladungscode" style="flex:1;min-width:160px" autocomplete="off"><button class="btn" id="codeBtn">Übernehmen</button></div><div class="savestate" id="codeState"></div></div></details>`;
+  el.innerHTML=`<details id="zug"${zugOpen?' open':''}><summary class="muted" style="cursor:pointer">Organisator-Zugang</summary><div class="card" style="margin-top:8px"><p class="muted">Nur für Organisatoren. Wer das Feld als Erste oder Erster leer lässt, wird Organisator. Weitere Geräte und Personen geben den Einladungscode ein (zu finden unter Verwaltung, Organisatoren, auf einem Organisator-Gerät).</p><div class="row"><input type="text" id="codeIn" placeholder="Einladungscode" style="flex:1;min-width:160px" autocomplete="off"><button class="btn" id="codeBtn">Übernehmen</button></div><div class="savestate" id="codeState"></div></div></details>`;
 }
 
 /* ---------- Start ---------- */
@@ -449,7 +449,7 @@ function attachTips(){
     if(me.admin&&!invAttached){invAttached=true;db.ref('adminInvite').on('value',x=>{invite=x.val();renderAdmin()},()=>{})}
     attachTips();renderAll()};
   db.ref('admin/first').on('value',s=>{admFirst=s.val();admLoaded.f=true;admUpd()},err);
-  db.ref('admin/second/uid').on('value',s=>{admSecond=s.val();admLoaded.s=true;admUpd()},err);
+  db.ref('admin/devices/'+me.uid).on('value',s=>{admSecond=s.exists()?me.uid:null;admLoaded.s=true;admUpd()},err);
   db.ref('config').on('value',s=>{cfgRemote=s.val();loaded.cfg=true;fillAthletes();attachTips();renderAll()},err);
   db.ref('players').on('value',s=>{players=s.val()||{};loaded.tips=true;rebuild()},err);
   db.ref('results').on('value',s=>{autoRes=s.val()||{};renderAll()},()=>{});
