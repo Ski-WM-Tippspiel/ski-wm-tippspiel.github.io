@@ -1,0 +1,33 @@
+name: FIS-Resultate abgleichen
+
+on:
+  schedule:
+    # Nur während der WM (UTC; 7-17 Uhr UTC entspricht 8-18 Uhr Schweizer Zeit im Winter)
+    - cron: '*/10 7-17 31 1 *'
+    - cron: '*/10 7-17 1-20 2 *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Nur testen, nichts in die Datenbank schreiben'
+        type: boolean
+        default: true
+
+concurrency:
+  group: fis-results
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/fetch-fis-results.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
