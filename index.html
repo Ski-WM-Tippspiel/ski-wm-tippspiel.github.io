@@ -289,7 +289,7 @@ function renderTipp(force){
     const pick=(t.picks&&t.picks[r.id])||['','',''];
     const sc=hasResult(r)?scoreRace(pick,r):null;
     h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><span class="tag">${esc(fmtDate(r.date,r.time))}</span></div>`+
-      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" list="athletes" id="t-${r.id}-${i}" value="${esc(pick[i])}" placeholder="${i===0?'Sieger':i===1?'Zweiter':'Dritter'}"${dis} autocomplete="off"></div>`).join('')+
+      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" id="t-${r.id}-${i}" value="${esc(pick[i])}" placeholder="${i===0?'Sieger':i===1?'Zweiter':'Dritter'}"${dis} autocomplete="off"></div>`).join('')+
       (sc?`<div class="res">Resultat: ${r.results.map((x,i)=>`${i+1}. ${esc(x)}`).join(' · ')} → <strong>+${sc.pts} Punkte</strong></div>`:'')+`</div>`;
   });
   h+=`<div class="card"><div class="race-head"><strong>Medaillen ${esc(c.nation)}</strong><span class="tag">Zusatzfrage</span></div><label class="field">Wie viele Medaillen gewinnt ${esc(c.nation)} an dieser WM insgesamt?<input type="number" id="t-medals" min="0" max="40" inputmode="numeric" value="${t.medals==null?'':esc(t.medals)}"${dis}></label></div>`;
@@ -334,7 +334,7 @@ function renderAdmin(force){
   h+='<h2>Resultate</h2><p class="muted">Die Resultate kommen automatisch von fis-ski.com (grau angezeigt). Nur ausfüllen, wenn FIS fehlt oder falsch ist: Eigene Eingaben haben Vorrang.</p>';
   c.races.forEach(r=>{
     h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><div class="row"><input type="text" id="a-${r.id}-date" value="${esc(r.date)}" style="width:130px" aria-label="Datum JJJJ-MM-TT"><input type="text" id="a-${r.id}-time" value="${esc(r.time)}" placeholder="Zeit" style="width:80px" aria-label="Zeit"></div></div>`+
-      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" list="athletes" id="a-${r.id}-${i}" value="${esc((r.manual||[])[i]||'')}" placeholder="${esc(((autoRes[r.id]||{}).rows||[])[i]?autoRes[r.id].rows[i].name:'')}" autocomplete="off"></div>`).join('')+'</div>';
+      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" id="a-${r.id}-${i}" value="${esc((r.manual||[])[i]||'')}" placeholder="${esc(((autoRes[r.id]||{}).rows||[])[i]?autoRes[r.id].rows[i].name:'')}" autocomplete="off"></div>`).join('')+'</div>';
   });
   h+='<div class="row"><button class="btn" id="a-save">Einstellungen und Resultate speichern</button><span class="savestate" id="a-state"></span></div>';
   el.innerHTML=h;fillAthletes();
