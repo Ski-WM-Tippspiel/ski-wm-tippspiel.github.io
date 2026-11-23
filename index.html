@@ -191,11 +191,16 @@ function same(a,b){
 }
 function hasResult(r){return !!(r.rows&&r.rows.length>=3)}
 function scoreRace(pick,r){
-  const p=pick||['','',''],rows=r.rows;let pts=0;const marks=[];
+  /* Jeder Podestplatz im Resultat zählt nur einmal: Wer denselben Namen mehrfach tippt, bekommt ihn nur einmal gewertet. */
+  const p=pick||['','',''],rows=r.rows,used=new Set(),marks=['','',''];let pts=0;
   for(let i=0;i<3;i++){
-    if(rows.some(x=>x.rank===i+1&&same(p[i],x.name))){pts+=[PTS.win,PTS.second,PTS.third][i];marks.push('hit')}
-    else if(rows.some(x=>same(p[i],x.name))){pts+=PTS.podium;marks.push('near')}
-    else marks.push('miss');
+    const k=rows.findIndex((x,n)=>!used.has(n)&&x.rank===i+1&&same(p[i],x.name));
+    if(k>=0){used.add(k);marks[i]='hit';pts+=[PTS.win,PTS.second,PTS.third][i]}
+  }
+  for(let i=0;i<3;i++){
+    if(marks[i])continue;
+    const k=rows.findIndex((x,n)=>!used.has(n)&&same(p[i],x.name));
+    if(k>=0){used.add(k);marks[i]='near';pts+=PTS.podium}else marks[i]='miss';
   }
   const full=marks.every(m=>m==='hit'); /* ganzes Podest richtig = 5+3+2 = 10 Punkte, kein Zusatzbonus */
   return {pts,marks,full};
