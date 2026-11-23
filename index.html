@@ -142,13 +142,25 @@ let db=null, me={uid:null,admin:false}, cfgRemote=null, tips={}, players={}, tip
 let loaded={cfg:false,tips:false,admin:false}, dbError=null, setupMissing=false, tipsAttached=false, openSet=new Set(), saveTimer=null, chain=Promise.resolve();
 
 const rawCfg=()=>{const c=Object.assign({},DEFAULTS,cfgRemote||{}); c.paid=c.paid||{}; c.races=(cfgRemote&&cfgRemote.races)||DEFAULTS.races; return c};
+/* Manuelle Eingabe: pro Feld ein Name; bei Gleichstand mehrere Namen mit « / » trennen */
+const parseManual=man=>{const rows=[];man.slice(0,3).forEach((cell,i)=>String(cell||'').split('/').map(s=>s.trim()).filter(Boolean).forEach(n=>rows.push({name:n,rank:i+1,nat:''})));return rows};
+/* Bei Gleichstand belegen die gleichplatzierten Fahrer gemeinsam die Plätze (z. B. zwei Sieger: Platz 1 und 2) */
+function addSlots(rows){
+  const out=rows.map(r=>Object.assign({},r)),by={};let before=0;
+  out.forEach(r=>{(by[r.rank]=by[r.rank]||[]).push(r)});
+  Object.keys(by).map(Number).sort((a,b)=>a-b).forEach(rk=>{const g=by[rk],s=g.map((_,k)=>before+1+k);g.forEach(r=>{r.slots=s});before+=g.length});
+  return out;
+}
+const resLines=(r,sep)=>r.rows.map(x=>x.rank+'. '+esc(x.name)).join(sep);
 /* Anzeige-Konfiguration: manuelle Resultate haben Vorrang, sonst gelten die FIS-Resultate */
 const cfg=()=>{
   const c=rawCfg();
   c.races=c.races.map(r=>{
     const man=r.results||['','',''];let rows=null,src='';
-    if(man.length===3&&man.every(x=>norm(x))){rows=man.map((n,i)=>({name:n,rank:i+1,nat:''}));src='manuell'}
+    const mrows=parseManual(man);
+    if(mrows.length>=3&&norm(man[0])){rows=mrows;src='manuell'}
     else if(autoRes[r.id]&&autoRes[r.id].rows){rows=autoRes[r.id].rows;src='FIS'}
+    if(rows)rows=addSlots(rows);
     return Object.assign({},r,{manual:man,rows,src,results:rows?rows.slice(0,3).map(x=>x.name):['','','']});
   });
   c.medalsRaw=c.medalsActual;
@@ -181,7 +193,7 @@ function hasResult(r){return !!(r.rows&&r.rows.length>=3)}
 function scoreRace(pick,r){
   const p=pick||['','',''],rows=r.rows;let pts=0;const marks=[];
   for(let i=0;i<3;i++){
-    if(rows.some(x=>x.rank===i+1&&same(p[i],x.name))){pts+=[PTS.win,PTS.second,PTS.third][i];marks.push('hit')}
+    if(rows.some(x=>x.slots.includes(i+1)&&same(p[i],x.name))){pts+=[PTS.win,PTS.second,PTS.third][i];marks.push('hit')}
     else if(rows.some(x=>same(p[i],x.name))){pts+=PTS.podium;marks.push('near')}
     else marks.push('miss');
   }
@@ -243,7 +255,7 @@ function renderRang(){
       const pick=(p.t.picks&&p.t.picks[r.id])||['','',''];
       const sc=hasResult(r)?scoreRace(pick,r):null;
       const tipHtml=show?pick.map((x,i)=>`<span class="${sc?sc.marks[i]:''}">${i+1}. ${esc(x||'–')}</span>`).join('<br>'):'<span class="muted">verdeckt</span>';
-      const resHtml=hasResult(r)?r.results.map((x,i)=>`${i+1}. ${esc(x)}`).join('<br>'):'<span class="muted">offen</span>';
+      const resHtml=hasResult(r)?resLines(r,'<br>'):'<span class="muted">offen</span>';
       return `<tr><td>${esc(r.name)}<br><span class="muted">${esc(r.who)}</span></td><td>${tipHtml}</td><td>${resHtml}</td><td class="n">${sc?'+'+sc.pts+(sc.full?' ★':''):'–'}</td></tr>`;
     }).join('');
     const med=`<tr><td>Medaillen ${esc(c.nation)}</td><td>${show?(p.t.medals==null?'–':esc(p.t.medals)):'<span class="muted">verdeckt</span>'}</td><td>${c.medalsActual==null?'<span class="muted">offen</span>':esc(c.medalsActual)}</td><td class="n">${c.medalsActual==null?'–':'+'+p.mp}</td></tr>`;
@@ -290,7 +302,7 @@ function renderTipp(force){
     const sc=hasResult(r)?scoreRace(pick,r):null;
     h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><span class="tag">${esc(fmtDate(r.date,r.time))}</span></div>`+
       [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" id="t-${r.id}-${i}" value="${esc(pick[i])}" placeholder="${i===0?'Sieger':i===1?'Zweiter':'Dritter'}"${dis} autocomplete="off"></div>`).join('')+
-      (sc?`<div class="res">Resultat: ${r.results.map((x,i)=>`${i+1}. ${esc(x)}`).join(' · ')} → <strong>+${sc.pts} Punkte</strong></div>`:'')+`</div>`;
+      (sc?`<div class="res">Resultat: ${resLines(r,' · ')} → <strong>+${sc.pts} Punkte</strong></div>`:'')+`</div>`;
   });
   h+=`<div class="card"><div class="race-head"><strong>Medaillen ${esc(c.nation)}</strong><span class="tag">Zusatzfrage</span></div><label class="field">Wie viele Medaillen gewinnt ${esc(c.nation)} an dieser WM insgesamt?<input type="number" id="t-medals" min="0" max="40" inputmode="numeric" value="${t.medals==null?'':esc(t.medals)}"${dis}></label></div>`;
   h+=`<div class="row"><span class="savestate" id="savestate"></span><button class="btn sec small" id="copyBtn">Tipps als Text anzeigen</button></div><div id="copyBox"></div>`;
@@ -301,7 +313,7 @@ function renderRennen(){
   const c=cfg();let h='<h2>Rennen</h2><p class="muted">Programm laut FIS, Zeit = Start 1. Lauf (Ortszeit). Die Resultate werden automatisch von fis-ski.com übernommen'+(meta&&meta.checked?' (letzter Abgleich: '+esc(new Date(meta.checked).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'}))+')':'')+'.</p>';
   c.races.forEach(r=>{
     h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><span class="tag">${esc(fmtDate(r.date,r.time))}</span></div>`+
-      (hasResult(r)?`<div><span class="tag">${r.src==='FIS'?'offiziell von FIS':'manuell eingetragen'}</span>${r.results.map((x,i)=>`<div><span class="rank-no r${i+1}" style="display:inline-block;width:24px">${i+1}</span> ${esc(x)}</div>`).join('')}</div>`:'<span class="muted">Resultat noch offen</span>')+'</div>';
+      (hasResult(r)?`<div><span class="tag">${r.src==='FIS'?'offiziell von FIS':'manuell eingetragen'}</span>${r.rows.map(x=>`<div><span class="rank-no r${x.rank}" style="display:inline-block;width:24px">${x.rank}</span> ${esc(x.name)}</div>`).join('')}</div>`:'<span class="muted">Resultat noch offen</span>')+'</div>';
   });
   $('#p-rennen').innerHTML=h;
 }
@@ -331,10 +343,10 @@ function renderAdmin(force){
   h+=`</div><div class="card"><h3>Teilnehmer ohne Zugang erfassen</h3><p class="muted">Für alle, die ihre Tipps per Nachricht schicken.</p><div class="row"><input type="text" id="a-newname" placeholder="Name" style="flex:1;min-width:160px"><button class="btn" id="a-add">Hinzufügen</button></div></div>`;
   h+=`<h2>Organisatoren</h2><div class="card"><p class="muted">Mit diesem Code wird jedes weitere Gerät (zum Beispiel dein Handy) oder die zweite Person Organisator: Link öffnen, unten «Organisator-Zugang» aufklappen, Code eingeben. Gib den Code nur an Vertraute weiter und erzeuge danach einen neuen, damit der alte nicht mehr gilt.</p><div class="row"><code id="inv" style="font-size:18px;letter-spacing:.08em">${esc(invite||'–')}</code><button class="btn sec small" id="invNew">Neuen Code erzeugen</button></div></div>`;
   h+='<h2>Einstellungen</h2><div class="card"><div class="grid2"><label class="field">Tippschluss<input type="datetime-local" id="a-deadline" value="'+esc(c.deadline)+'"></label><label class="field">Einsatz (CHF)<input type="number" id="a-stake" min="0" step="0.5" value="'+esc(c.stake)+'"></label><label class="field">Nation für Medaillen-Tipp<input type="text" id="a-nation" value="'+esc(c.nation)+'"></label><label class="field">Tatsächliche Medaillen (leer = offen)<input type="number" id="a-medals" min="0" value="'+(c.medalsRaw==null?'':esc(c.medalsRaw))+'" placeholder="'+(c.medalsRaw==null&&c.medalsActual!=null?'FIS: '+esc(c.medalsActual):'')+'"></label></div><label class="field">Zahlungshinweis für alle (z. B. «Twint an Martin, 079 …»)<input type="text" id="a-pay" value="'+esc(c.payInfo||'')+'"></label></div>';
-  h+='<h2>Resultate</h2><p class="muted">Die Resultate kommen automatisch von fis-ski.com (grau angezeigt). Nur ausfüllen, wenn FIS fehlt oder falsch ist: Eigene Eingaben haben Vorrang.</p>';
+  h+='<h2>Resultate</h2><p class="muted">Die Resultate kommen automatisch von fis-ski.com (grau angezeigt). Nur ausfüllen, wenn FIS fehlt oder falsch ist: Eigene Eingaben haben Vorrang. Bei Gleichstand trennst du die Namen mit « / », zum Beispiel «Macuga / Vickhoff Lie» im Feld 3. Bei zwei Siegern steht «A / B» im Feld 1, Feld 2 bleibt leer und im Feld 3 steht der Dritte.</p>';
   c.races.forEach(r=>{
     h+=`<div class="card"><div class="race-head"><strong>${esc(r.name)} · ${esc(r.who)}</strong><div class="row"><input type="text" id="a-${r.id}-date" value="${esc(r.date)}" style="width:130px" aria-label="Datum JJJJ-MM-TT"><input type="text" id="a-${r.id}-time" value="${esc(r.time)}" placeholder="Zeit" style="width:80px" aria-label="Zeit"></div></div>`+
-      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" id="a-${r.id}-${i}" value="${esc((r.manual||[])[i]||'')}" placeholder="${esc(((autoRes[r.id]||{}).rows||[])[i]?autoRes[r.id].rows[i].name:'')}" autocomplete="off"></div>`).join('')+'</div>';
+      [0,1,2].map(i=>`<div class="pick"><div class="rank-no r${i+1}">${i+1}</div><input type="text" id="a-${r.id}-${i}" value="${esc((r.manual||[])[i]||'')}" placeholder="${esc(((autoRes[r.id]||{}).rows||[]).filter(x=>x.rank===i+1).map(x=>x.name).join(' / '))}" autocomplete="off"></div>`).join('')+'</div>';
   });
   h+='<div class="row"><button class="btn" id="a-save">Einstellungen und Resultate speichern</button><span class="savestate" id="a-state"></span></div>';
   el.innerHTML=h;fillAthletes();
