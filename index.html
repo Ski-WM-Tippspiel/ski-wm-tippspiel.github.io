@@ -193,7 +193,7 @@ function hasResult(r){return !!(r.rows&&r.rows.length>=3)}
 function scoreRace(pick,r){
   const p=pick||['','',''],rows=r.rows;let pts=0;const marks=[];
   for(let i=0;i<3;i++){
-    if(rows.some(x=>x.slots.includes(i+1)&&same(p[i],x.name))){pts+=[PTS.win,PTS.second,PTS.third][i];marks.push('hit')}
+    if(rows.some(x=>x.rank===i+1&&same(p[i],x.name))){pts+=[PTS.win,PTS.second,PTS.third][i];marks.push('hit')}
     else if(rows.some(x=>same(p[i],x.name))){pts+=PTS.podium;marks.push('near')}
     else marks.push('miss');
   }
@@ -324,6 +324,7 @@ function renderRegeln(){
   <h3>2. Punktewertung pro Rennen</h3>
   <ul class="rules"><li>Sieger richtig: <b>${PTS.win}</b></li><li>2. Platz richtig: <b>${PTS.second}</b></li><li>3. Platz richtig: <b>${PTS.third}</b></li>
   <li>Podest getroffen, aber auf dem falschen Platz: <b>${PTS.podium}</b></li><li>Ganzes Podest in der richtigen Reihenfolge: <b>${PTS.full}</b> (5 + 3 + 2), das ist die Höchstpunktzahl pro Rennen</li></ul>
+  <p class="muted">Bei Gleichstand zählt der tatsächliche Rang. Teilen sich zwei Fahrer Platz 1, gibt es keinen 2. Platz: Wer einen von beiden als Zweiten tippt, bekommt 1 Punkt (auf dem Podest, aber am falschen Platz). Bei Gleichstand um Platz 3 zählen beide als Dritte.</p>
   <h3>Medaillen ${esc(c.nation)}</h3><p>Genau richtig ${PTS.medal[0]}, eine daneben ${PTS.medal[1]}, zwei daneben ${PTS.medal[2]}, drei daneben ${PTS.medal[3]}, vier daneben ${PTS.medal[4]} Punkte.</p>
   <h3>3. Gewinnausschüttung</h3><ul class="rules"><li>Sieger: die Hälfte des Pots</li><li>2. Platz: zwei Drittel davon (ein Drittel des Pots)</li><li>3. Platz: ein Drittel davon (ein Sechstel des Pots)</li></ul>
   <h3>4. Anmeldeschluss</h3><p>${esc(fmtDT(c.deadline))}. Bis dann muss der Einsatz bezahlt und der Tipp abgegeben sein. Die Tipps der anderen sind erst nach Tippschluss sichtbar.</p>
