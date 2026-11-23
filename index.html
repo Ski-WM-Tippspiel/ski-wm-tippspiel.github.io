@@ -200,16 +200,29 @@ function scoreRace(pick,r){
   const full=marks.every(m=>m==='hit'); /* ganzes Podest richtig = 5+3+2 = 10 Punkte, kein Zusatzbonus */
   return {pts,marks,full};
 }
+const fmtP=n=>Number.isInteger(n)?String(n):(Math.round(n*10)/10).toString().replace('.',',');
 function scoreMedals(m,actual){if(m==null||actual==null)return 0;const d=Math.abs(m-actual);return PTS.medal[d]||0}
 function scorePerson(t,c){
   const rows=[];let total=0;
   c.races.forEach(r=>{if(!hasResult(r))return;const s=scoreRace(t.picks&&t.picks[r.id],r);total+=s.pts;rows.push({r,s})});
-  const mp=scoreMedals(t.medals,c.medalsActual);total+=mp;
+  const mp=0; /* Medaillen-Punkte werden in leaderboard() nach Nähe unter allen Tippenden vergeben */
   return {total,rows,mp};
 }
 function leaderboard(){
   const c=cfg();
   const list=Object.entries(tips).filter(([id,t])=>t&&t.name).map(([id,t])=>({id,t,...scorePerson(t,c)}));
+  /* Medaillen-Frage: Wer am nächsten am Ergebnis liegt, bekommt 5, dann 4, 3, 2, 1. Bei gleicher Abweichung wird geteilt. */
+  if(c.medalsActual!=null){
+    const cand=list.filter(p=>p.t.medals!=null&&p.t.medals!=='').map(p=>({p,d:Math.abs(Number(p.t.medals)-c.medalsActual)})).sort((a,b)=>a.d-b.d);
+    let i=0;
+    while(i<cand.length){
+      let j=i;while(j+1<cand.length&&cand[j+1].d===cand[i].d)j++;
+      let sum=0;for(let k=i;k<=j;k++)if(k<PTS.medal.length)sum+=PTS.medal[k];
+      const each=Math.round(sum/(j-i+1)*100)/100;
+      for(let k=i;k<=j;k++){cand[k].p.mp=each;cand[k].p.total+=each}
+      i=j+1;
+    }
+  }
   list.sort((a,b)=>b.total-a.total||a.t.name.localeCompare(b.t.name,'de'));
   const paidN=list.filter(p=>c.paid[p.id]).length, pot=paidN*Number(c.stake||0);
   const shares=[1/2,1/3,1/6];
@@ -258,13 +271,13 @@ function renderRang(){
       const resHtml=hasResult(r)?resLines(r,'<br>'):'<span class="muted">offen</span>';
       return `<tr><td>${esc(r.name)}<br><span class="muted">${esc(r.who)}</span></td><td>${tipHtml}</td><td>${resHtml}</td><td class="n">${sc?'+'+sc.pts+(sc.full?' ★':''):'–'}</td></tr>`;
     }).join('');
-    const med=`<tr><td>Medaillen ${esc(c.nation)}</td><td>${show?(p.t.medals==null?'–':esc(p.t.medals)):'<span class="muted">verdeckt</span>'}</td><td>${c.medalsActual==null?'<span class="muted">offen</span>':esc(c.medalsActual)}</td><td class="n">${c.medalsActual==null?'–':'+'+p.mp}</td></tr>`;
+    const med=`<tr><td>Medaillen ${esc(c.nation)}</td><td>${show?(p.t.medals==null?'–':esc(p.t.medals)):'<span class="muted">verdeckt</span>'}</td><td>${c.medalsActual==null?'<span class="muted">offen</span>':esc(c.medalsActual)}</td><td class="n">${c.medalsActual==null?'–':'+'+fmtP(p.mp)}</td></tr>`;
     const cls=p.rank<=3&&lb.done?' r'+p.rank:'';
     h+=`<details class="lb" data-id="${esc(p.id)}"${openSet.has(p.id)?' open':''}><summary>
       <div class="pos${cls}">${p.rank}</div>
       <div><div class="name">${esc(p.t.name)}${p.id===me.uid?' <span class="tag">du</span>':''}</div>
       <div class="paid"><span class="chip ${c.paid[p.id]?'ok':'open'}">${c.paid[p.id]?'bezahlt':'Einsatz offen'}</span>${lb.done&&p.prize>0?` · <span class="prize">Gewinn ${chf(p.prize)}</span>`:''}</div></div>
-      <div class="pts">${p.total}<small>Punkte</small></div></summary>
+      <div class="pts">${fmtP(p.total)}<small>Punkte</small></div></summary>
       <div class="detail"><table><thead><tr><th>Rennen</th><th>Tipp</th><th>Resultat</th><th>Pkt</th></tr></thead><tbody>${rows}${med}</tbody></table>
       ${show?'':'<p class="muted" style="margin:8px 0 0">Die Tipps der anderen werden nach Tippschluss sichtbar.</p>'}</div></details>`;
   });
@@ -325,7 +338,7 @@ function renderRegeln(){
   <ul class="rules"><li>Sieger richtig: <b>${PTS.win}</b></li><li>2. Platz richtig: <b>${PTS.second}</b></li><li>3. Platz richtig: <b>${PTS.third}</b></li>
   <li>Podest getroffen, aber auf dem falschen Platz: <b>${PTS.podium}</b></li><li>Ganzes Podest in der richtigen Reihenfolge: <b>${PTS.full}</b> (5 + 3 + 2), das ist die Höchstpunktzahl pro Rennen</li></ul>
   <p class="muted">Bei Gleichstand zählt der tatsächliche Rang. Teilen sich zwei Fahrer Platz 1, gibt es keinen 2. Platz: Wer einen von beiden als Zweiten tippt, bekommt 1 Punkt (auf dem Podest, aber am falschen Platz). Bei Gleichstand um Platz 3 zählen beide als Dritte.</p>
-  <h3>Medaillen ${esc(c.nation)}</h3><p>Genau richtig ${PTS.medal[0]}, eine daneben ${PTS.medal[1]}, zwei daneben ${PTS.medal[2]}, drei daneben ${PTS.medal[3]}, vier daneben ${PTS.medal[4]} Punkte.</p>
+  <h3>Medaillen ${esc(c.nation)}</h3><p>Wer mit seinem Tipp am nächsten am tatsächlichen Ergebnis liegt, bekommt ${PTS.medal[0]} Punkte, der Zweitnächste ${PTS.medal[1]}, der Dritte ${PTS.medal[2]}, der Vierte ${PTS.medal[3]}, der Fünfte ${PTS.medal[4]}. Bei gleicher Abweichung werden die Punkte der belegten Plätze geteilt (zwei Gleiche auf Platz 1 bekommen je 4,5). Vergeben wird erst, wenn das Endergebnis feststeht.</p>
   <h3>3. Gewinnausschüttung</h3><ul class="rules"><li>Sieger: die Hälfte des Pots</li><li>2. Platz: zwei Drittel davon (ein Drittel des Pots)</li><li>3. Platz: ein Drittel davon (ein Sechstel des Pots)</li></ul>
   <h3>4. Anmeldeschluss</h3><p>${esc(fmtDT(c.deadline))}. Bis dann muss der Einsatz bezahlt und der Tipp abgegeben sein. Die Tipps der anderen sind erst nach Tippschluss sichtbar.</p>
   <p class="muted">Namen werden ohne Beachtung von Gross-/Kleinschreibung und Akzenten verglichen. Der Nachname allein genügt (z. B. «Odermatt»), kleine Tippfehler werden verziehen. Bei Teamrennen zählt die Nation (z. B. «Schweiz»). Die Resultate übernimmt die Seite automatisch von fis-ski.com.</p>`;
