@@ -205,6 +205,7 @@ function scoreRace(pick,r){
   const full=marks.every(m=>m==='hit'); /* ganzes Podest richtig = 5+3+2 = 10 Punkte, kein Zusatzbonus */
   return {pts,marks,full};
 }
+const fmtPct=s=>(Math.round(s*1000)/10).toString().replace('.',',')+' %';
 const fmtP=n=>Number.isInteger(n)?String(n):(Math.round(n*10)/10).toString().replace('.',',');
 function scoreMedals(m,actual){if(m==null||actual==null)return 0;const d=Math.abs(m-actual);return PTS.medal[d]||0}
 function scorePerson(t,c){
@@ -235,7 +236,7 @@ function leaderboard(){
   while(i<list.length){
     let j=i;while(j+1<list.length&&list[j+1].total===list[i].total)j++;
     const g=j-i+1;let sum=0;for(let k=i;k<=j;k++)if(k<3)sum+=shares[k];
-    for(let k=i;k<=j;k++){list[k].rank=i+1;list[k].prize=pot*sum/g}
+    for(let k=i;k<=j;k++){list[k].rank=i+1;list[k].prize=pot*sum/g;list[k].share=sum/g}
     i=j+1;
   }
   const done=c.races.filter(hasResult).length;
@@ -281,12 +282,12 @@ function renderRang(){
     h+=`<details class="lb" data-id="${esc(p.id)}"${openSet.has(p.id)?' open':''}><summary>
       <div class="pos${cls}">${p.rank}</div>
       <div><div class="name">${esc(p.t.name)}${p.id===me.uid?' <span class="tag">du</span>':''}</div>
-      <div class="paid"><span class="chip ${c.paid[p.id]?'ok':'open'}">${c.paid[p.id]?'bezahlt':'Einsatz offen'}</span>${lb.done&&p.prize>0?` · <span class="prize">Gewinn ${chf(p.prize)}</span>`:''}</div></div>
+      <div class="paid"><span class="chip ${c.paid[p.id]?'ok':'open'}">${c.paid[p.id]?'bezahlt':'Einsatz offen'}</span>${lb.done&&p.share>0?` · <span class="prize">Gewinn ${chf(p.prize)} (${fmtPct(p.share)})</span>`:''}</div></div>
       <div class="pts">${fmtP(p.total)}<small>Punkte</small></div></summary>
       <div class="detail"><table><thead><tr><th>Rennen</th><th>Tipp</th><th>Resultat</th><th>Pkt</th></tr></thead><tbody>${rows}${med}</tbody></table>
       ${show?'':'<p class="muted" style="margin:8px 0 0">Die Tipps der anderen werden nach Tippschluss sichtbar.</p>'}</div></details>`;
   });
-  h+=`<p class="muted" style="font-size:13px">Auszahlung: ${chf(lb.pot)} im Pot (${lb.paidN} bezahlte Einsätze). Sieger 1/2, Platz 2 ein Drittel, Platz 3 ein Sechstel. Bei Punktgleichheit wird geteilt. ★ = ganzes Podest in der richtigen Reihenfolge.</p>`;
+  h+=`<p class="muted" style="font-size:13px">Auszahlung: ${chf(lb.pot)} im Pot (${lb.paidN} bezahlte Einsätze). Sieger 50 %, Platz 2 33,3 %, Platz 3 16,7 % des Pots. Bei Punktgleichheit wird geteilt. ★ = ganzes Podest in der richtigen Reihenfolge.</p>`;
   el.innerHTML=h;
 }
 function textExport(id){
@@ -344,7 +345,7 @@ function renderRegeln(){
   <li>Podest getroffen, aber auf dem falschen Platz: <b>${PTS.podium}</b></li><li>Ganzes Podest in der richtigen Reihenfolge: <b>${PTS.full}</b> (5 + 3 + 2), das ist die Höchstpunktzahl pro Rennen</li></ul>
   <p class="muted">Bei Gleichstand zählt der tatsächliche Rang. Teilen sich zwei Fahrer Platz 1, gibt es keinen 2. Platz: Wer einen von beiden als Zweiten tippt, bekommt 1 Punkt (auf dem Podest, aber am falschen Platz). Bei Gleichstand um Platz 3 zählen beide als Dritte.</p>
   <h3>Medaillen ${esc(c.nation)}</h3><p>Wer mit seinem Tipp am nächsten am tatsächlichen Ergebnis liegt, bekommt ${PTS.medal[0]} Punkte, der Zweitnächste ${PTS.medal[1]}, der Dritte ${PTS.medal[2]}, der Vierte ${PTS.medal[3]}, der Fünfte ${PTS.medal[4]}. Bei gleicher Abweichung werden die Punkte der belegten Plätze geteilt (zwei Gleiche auf Platz 1 bekommen je 4,5). Vergeben wird erst, wenn das Endergebnis feststeht.</p>
-  <h3>3. Gewinnausschüttung</h3><ul class="rules"><li>Sieger: die Hälfte des Pots</li><li>2. Platz: zwei Drittel davon (ein Drittel des Pots)</li><li>3. Platz: ein Drittel davon (ein Sechstel des Pots)</li></ul>
+  <h3>3. Gewinnausschüttung</h3><ul class="rules"><li>Sieger: die Hälfte des Pots (50 %)</li><li>2. Platz: zwei Drittel davon, ein Drittel des Pots (33,3 %)</li><li>3. Platz: ein Drittel davon, ein Sechstel des Pots (16,7 %)</li></ul><p class="muted">Bei gleicher Punktzahl werden die Anteile der belegten Plätze geteilt.</p>
   <h3>4. Anmeldeschluss</h3><p>${esc(fmtDT(c.deadline))}. Bis dann muss der Einsatz bezahlt und der Tipp abgegeben sein. Die Tipps der anderen sind erst nach Tippschluss sichtbar.</p>
   <p class="muted">Namen werden ohne Beachtung von Gross-/Kleinschreibung und Akzenten verglichen. Der Nachname allein genügt (z. B. «Odermatt»), kleine Tippfehler werden verziehen. Bei Teamrennen zählt die Nation (z. B. «Schweiz»). Die Resultate übernimmt die Seite automatisch von fis-ski.com.</p>`;
 }
